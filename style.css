@@ -113,13 +113,6 @@ label {
   font-size: .95rem;
 }
 
-.bank-controls {
-  display: grid;
-  grid-template-columns: minmax(180px, 220px) 1fr auto;
-  gap: 10px;
-  align-items: center;
-}
-
 .bank-list {
   display: grid;
   gap: 8px;

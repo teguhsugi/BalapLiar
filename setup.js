@@ -1,9 +1,8 @@
-const SHEET_BASE_URL = 'https://docs.google.com/spreadsheets/d';
+﻿const SHEET_BASE_URL = 'https://docs.google.com/spreadsheets/d';
 const DEFAULT_SHEET_NAME = 'Sheet1';
 const PLAYER_COUNT = 4;
-const BANK_KEY = 'quizSheetBank';
-const SHARED_BANK_URL = 'bank.json';
-const HIDDEN_SHARED_KEY = 'hiddenSharedBankIds';
+const DEFAULT_BANK_SHEET_ID = '14q_D2KuPHJA6NG_iI69VzCgUaf-A8cMP_Rqsu5Eucrk';
+const DEFAULT_BANK_SHEET_NAME = 'Sheet1';
 
 const elements = {
   message: document.getElementById('message'),
@@ -12,9 +11,6 @@ const elements = {
   playerCount: document.getElementById('player-count'),
   loadButton: document.getElementById('load-sheet'),
   startButton: document.getElementById('start-game'),
-  bankTitle: document.getElementById('bank-title'),
-  bankInput: document.getElementById('bank-input'),
-  addBankButton: document.getElementById('add-bank-link'),
   bankList: document.getElementById('bank-list'),
   summary: document.getElementById('sheet-summary'),
 };
@@ -111,60 +107,6 @@ function saveGameData(normalizedQuestions, playerCount) {
   sessionStorage.setItem('quizGameData', JSON.stringify({ questions: normalizedQuestions, playerCount }));
 }
 
-function saveBankItems(items) {
-  localStorage.setItem(BANK_KEY, JSON.stringify(items));
-}
-
-function loadBankItems() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(BANK_KEY)) || [];
-    return stored.map((item) => {
-      if (typeof item === 'string') {
-        return { title: '', value: item };
-      }
-      return {
-        title: item.title || '',
-        value: item.value || '',
-      };
-    });
-  } catch (error) {
-    return [];
-  }
-}
-
-function loadHiddenSharedBankIds() {
-  try {
-    const hidden = JSON.parse(localStorage.getItem(HIDDEN_SHARED_KEY));
-    return Array.isArray(hidden) ? hidden : [];
-  } catch (error) {
-    return [];
-  }
-}
-
-function saveHiddenSharedBankIds(ids) {
-  localStorage.setItem(HIDDEN_SHARED_KEY, JSON.stringify(ids));
-}
-
-async function loadSharedBankItems() {
-  try {
-    const response = await fetch(SHARED_BANK_URL);
-    if (!response.ok) {
-      return [];
-    }
-    const data = await response.json();
-    if (!Array.isArray(data)) {
-      return [];
-    }
-    const hiddenIds = loadHiddenSharedBankIds();
-    return data
-      .filter((item) => item && typeof item.value === 'string')
-      .map((item) => ({ title: item.title || '', value: item.value }))
-      .filter((item) => !hiddenIds.includes(getSheetId(item.value)));
-  } catch (error) {
-    return [];
-  }
-}
-
 function getSheetId(value) {
   const trimmed = value.toString().trim();
   const match = trimmed.match(/[-\w]{25,}/);
@@ -174,97 +116,71 @@ function getSheetId(value) {
   return match[0];
 }
 
+function getBankValue(item) {
+  const keys = ['value', 'id', 'sheetid', 'sheet id', 'link', 'url', 'sheeturl'];
+  for (const key of keys) {
+    const value = item[key];
+    if (value != null && value.toString().trim() !== '') {
+      return value.toString().trim();
+    }
+  }
+  return '';
+}
+
+function getBankTitle(item, index) {
+  const keys = ['title', 'judul', 'name', 'nama', 'sheet', 'sheetname', 'nama sheet'];
+  for (const key of keys) {
+    const value = item[key];
+    if (value != null && value.toString().trim() !== '') {
+      return value.toString().trim();
+    }
+  }
+  return `Bank ${index + 1}`;
+}
+
+async function loadBankSheetItems() {
+  try {
+    const raw = await loadSheetData(DEFAULT_BANK_SHEET_ID, DEFAULT_BANK_SHEET_NAME);
+    return raw
+      .map((item, index) => {
+        const value = getBankValue(item);
+        return {
+          title: getBankTitle(item, index),
+          value,
+        };
+      })
+      .filter((item) => getSheetId(item.value));
+  } catch (error) {
+    return [];
+  }
+}
+
 async function renderBankList() {
-  const localItems = loadBankItems();
-  const sharedItems = await loadSharedBankItems();
-  const bySheetId = new Set();
-
-  const localNormalized = localItems.map((item, index) => ({
-    ...item,
-    source: 'local',
-    index,
-    sheetId: getSheetId(item.value),
-  })).filter((item) => item.sheetId);
-
-  const sharedNormalized = sharedItems.map((item) => ({
-    ...item,
-    source: 'shared',
-    sheetId: getSheetId(item.value),
-  })).filter((item) => item.sheetId);
-
-  const combined = [];
-  localNormalized.forEach((item) => {
-    if (!bySheetId.has(item.sheetId)) {
-      bySheetId.add(item.sheetId);
-      combined.push(item);
-    }
-  });
-  sharedNormalized.forEach((item) => {
-    if (!bySheetId.has(item.sheetId)) {
-      bySheetId.add(item.sheetId);
-      combined.push(item);
-    }
-  });
-
-  if (!combined.length) {
-    elements.bankList.innerHTML = '<p class="bank-empty">Belum ada bank sheet. Tambahkan link/ID di atas atau edit bank.json di repo.</p>';
+  const items = await loadBankSheetItems();
+  if (!items.length) {
+    elements.bankList.innerHTML = '<p class="bank-empty">Bank soal default tidak ditemukan. Cek koneksi atau spreadsheet default.</p>';
     return;
   }
 
-  elements.bankList.innerHTML = combined
+  elements.bankList.innerHTML = items
     .map((item) => {
-      const title = item.title || (item.source === 'shared' ? 'Bank Bersama' : 'Sheet Lokal');
-      const shortId = `${item.sheetId.slice(0, 6)}...${item.sheetId.slice(-6)}`;
+      const sheetId = getSheetId(item.value);
+      const title = item.title || 'Bank Soal';
+      const shortId = `${sheetId.slice(0, 6)}...${sheetId.slice(-6)}`;
       return `
-        <div class="bank-item" data-index="${item.source === 'local' ? item.index : -1}" data-source="${item.source}" data-id="${item.sheetId}">
+        <div class="bank-item" data-id="${sheetId}">
           <div class="bank-item-main">
             <div class="bank-item-title">${title}</div>
-            <div class="bank-item-meta">ID: ${shortId}${item.source === 'shared' ? ' · Bank Bersama' : ''}</div>
+            <div class="bank-item-meta">ID: ${shortId}</div>
           </div>
           <div class="bank-item-actions">
             <button type="button" class="copy-link">Copy ID</button>
             <button type="button" class="use-link">Pakai</button>
-            <button type="button" class="delete-link">Hapus</button>
           </div>
         </div>
       `;
     })
     .join('');
-}
-
-function addBankLink() {
-  const title = elements.bankTitle.value.trim();
-  const inputValue = elements.bankInput.value.trim();
-  if (!inputValue) {
-    setMessage('Masukkan URL atau ID terlebih dahulu.', 'error');
-    return;
-  }
-
-  const sheetId = getSheetId(inputValue);
-  if (!sheetId) {
-    setMessage('ID Google Sheet tidak valid.', 'error');
-    return;
-  }
-
-  const items = loadBankItems();
-  if (items.some((item) => item.value === inputValue || getSheetId(item.value) === sheetId)) {
-    setMessage('Link bank sudah ada.', 'info');
-    elements.bankInput.value = '';
-    elements.bankTitle.value = '';
-    return;
-  }
-
-  const newItem = {
-    title: title || `Sheet ${items.length + 1}`,
-    value: inputValue,
-  };
-
-  items.unshift(newItem);
-  saveBankItems(items.slice(0, 20));
-  elements.bankInput.value = '';
-  elements.bankTitle.value = '';
-  renderBankList();
-  setMessage('Link Google Sheet ditambahkan ke bank.', 'success');
 }
 
 function handleBankListClick(event) {
@@ -273,7 +189,6 @@ function handleBankListClick(event) {
 
   const item = button.closest('.bank-item');
   const sheetId = item?.dataset?.id;
-  const index = Number(item?.dataset?.index);
   if (!sheetId) return;
 
   if (button.classList.contains('copy-link')) {
@@ -287,27 +202,6 @@ function handleBankListClick(event) {
     elements.sheetId.value = sheetId;
     setMessage('ID sheet diisi dari bank.', 'success');
     return;
-  }
-
-  if (button.classList.contains('delete-link')) {
-    const source = item?.dataset?.source;
-    const sheetId = item?.dataset?.id;
-    if (!sheetId) return;
-    if (source === 'shared') {
-      const hiddenIds = loadHiddenSharedBankIds();
-      if (!hiddenIds.includes(sheetId)) {
-        hiddenIds.push(sheetId);
-        saveHiddenSharedBankIds(hiddenIds);
-      }
-      renderBankList();
-      setMessage('Contoh bank disembunyikan secara lokal.', 'success');
-      return;
-    }
-    const items = loadBankItems();
-    items.splice(index, 1);
-    saveBankItems(items);
-    renderBankList();
-    setMessage('Bank sheet dihapus.', 'success');
   }
 }
 
@@ -364,7 +258,6 @@ function startGame() {
 async function init() {
   elements.loadButton.addEventListener('click', loadQuestions);
   elements.startButton.addEventListener('click', startGame);
-  elements.addBankButton.addEventListener('click', addBankLink);
   elements.bankList.addEventListener('click', handleBankListClick);
   elements.startButton.disabled = true;
 
