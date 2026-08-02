@@ -334,14 +334,14 @@ function startGame() {
   window.location.href = 'game.html';
 }
 
-function init() {
+async function init() {
   elements.loadButton.addEventListener('click', loadQuestions);
   elements.startButton.addEventListener('click', startGame);
   elements.addBankButton.addEventListener('click', addBankLink);
   elements.bankList.addEventListener('click', handleBankListClick);
   elements.startButton.disabled = true;
 
-  renderBankList();
+  await renderBankList();
   setMessage('Masukkan ID Google Sheet lalu klik Muat Soal.', 'info');
 }
 
