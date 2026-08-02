@@ -2,6 +2,7 @@ const SHEET_BASE_URL = 'https://docs.google.com/spreadsheets/d';
 const DEFAULT_SHEET_NAME = 'Sheet1';
 const PLAYER_COUNT = 4;
 const BANK_KEY = 'quizSheetBank';
+const SHARED_BANK_URL = 'bank.json';
 
 const elements = {
   message: document.getElementById('message'),
@@ -130,6 +131,24 @@ function loadBankItems() {
   }
 }
 
+async function loadSharedBankItems() {
+  try {
+    const response = await fetch(SHARED_BANK_URL);
+    if (!response.ok) {
+      return [];
+    }
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      return [];
+    }
+    return data
+      .filter((item) => item && typeof item.value === 'string')
+      .map((item) => ({ title: item.title || '', value: item.value }));
+  } catch (error) {
+    return [];
+  }
+}
+
 function getSheetId(value) {
   const trimmed = value.toString().trim();
   const match = trimmed.match(/[-\w]{25,}/);
@@ -139,28 +158,57 @@ function getSheetId(value) {
   return match[0];
 }
 
-function renderBankList() {
-  const items = loadBankItems();
-  if (!items.length) {
-    elements.bankList.innerHTML = '<p class="bank-empty">Belum ada bank sheet. Tambahkan link/ID di atas.</p>';
+async function renderBankList() {
+  const localItems = loadBankItems();
+  const sharedItems = await loadSharedBankItems();
+  const bySheetId = new Set();
+
+  const localNormalized = localItems.map((item, index) => ({
+    ...item,
+    source: 'local',
+    index,
+    sheetId: getSheetId(item.value),
+  })).filter((item) => item.sheetId);
+
+  const sharedNormalized = sharedItems.map((item) => ({
+    ...item,
+    source: 'shared',
+    sheetId: getSheetId(item.value),
+  })).filter((item) => item.sheetId);
+
+  const combined = [];
+  localNormalized.forEach((item) => {
+    if (!bySheetId.has(item.sheetId)) {
+      bySheetId.add(item.sheetId);
+      combined.push(item);
+    }
+  });
+  sharedNormalized.forEach((item) => {
+    if (!bySheetId.has(item.sheetId)) {
+      bySheetId.add(item.sheetId);
+      combined.push(item);
+    }
+  });
+
+  if (!combined.length) {
+    elements.bankList.innerHTML = '<p class="bank-empty">Belum ada bank sheet. Tambahkan link/ID di atas atau edit bank.json di repo.</p>';
     return;
   }
 
-  elements.bankList.innerHTML = items
-    .map((item, index) => {
-      const sheetId = getSheetId(item.value);
-      const title = item.title || `Sheet ${index + 1}`;
-      const shortId = `${sheetId.slice(0, 6)}...${sheetId.slice(-6)}`;
+  elements.bankList.innerHTML = combined
+    .map((item) => {
+      const title = item.title || (item.source === 'shared' ? 'Bank Bersama' : 'Sheet Lokal');
+      const shortId = `${item.sheetId.slice(0, 6)}...${item.sheetId.slice(-6)}`;
       return `
-        <div class="bank-item" data-index="${index}" data-id="${sheetId}">
+        <div class="bank-item" data-index="${item.source === 'local' ? item.index : -1}" data-source="${item.source}" data-id="${item.sheetId}">
           <div class="bank-item-main">
             <div class="bank-item-title">${title}</div>
-            <div class="bank-item-meta">ID: ${shortId}</div>
+            <div class="bank-item-meta">ID: ${shortId}${item.source === 'shared' ? ' · Bank Bersama' : ''}</div>
           </div>
           <div class="bank-item-actions">
             <button type="button" class="copy-link">Copy ID</button>
             <button type="button" class="use-link">Pakai</button>
-            <button type="button" class="delete-link">Hapus</button>
+            ${item.source === 'local' ? '<button type="button" class="delete-link">Hapus</button>' : ''}
           </div>
         </div>
       `;
@@ -226,6 +274,8 @@ function handleBankListClick(event) {
   }
 
   if (button.classList.contains('delete-link')) {
+    const source = item?.dataset?.source;
+    if (source !== 'local') return;
     const items = loadBankItems();
     items.splice(index, 1);
     saveBankItems(items);

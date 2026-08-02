@@ -115,7 +115,7 @@ label {
 
 .bank-controls {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(180px, 220px) 1fr auto;
   gap: 10px;
   align-items: center;
 }
@@ -138,32 +138,47 @@ label {
   border-radius: 999px;
 }
 
-.bank-list {
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-}
-
 .bank-item {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 14px;
 }
 
-.bank-item-text {
+.bank-item-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bank-item-title {
+  font-weight: 700;
+  color: #f8fafc;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #e2e8f0;
+}
+
+.bank-item-meta {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.bank-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .bank-item-actions button {
-  min-width: 100px;
+  min-width: 68px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
 }
 
 .bank-empty {
