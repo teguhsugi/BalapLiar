@@ -1,8 +1,12 @@
 ﻿const SHEET_BASE_URL = 'https://docs.google.com/spreadsheets/d';
 const DEFAULT_SHEET_NAME = 'Sheet1';
 const PLAYER_COUNT = 4;
-const DEFAULT_BANK_SHEET_ID = '14q_D2KuPHJA6NG_iI69VzCgUaf-A8cMP_Rqsu5Eucrk';
-const DEFAULT_BANK_SHEET_NAME = 'Sheet1';
+const DEFAULT_BANK = [
+  {
+    title: 'Pengetahuan Umum',
+    value: '14q_D2KuPHJA6NG_iI69VzCgUaf-A8cMP_Rqsu5Eucrk',
+  },
+];
 
 const elements = {
   message: document.getElementById('message'),
@@ -116,51 +120,8 @@ function getSheetId(value) {
   return match[0];
 }
 
-function getBankValue(item) {
-  const keys = ['value', 'id', 'sheetid', 'sheet id', 'link', 'url', 'sheeturl'];
-  for (const key of keys) {
-    const value = item[key];
-    if (value != null && value.toString().trim() !== '') {
-      return value.toString().trim();
-    }
-  }
-  return '';
-}
-
-function getBankTitle(item, index) {
-  const keys = ['title', 'judul', 'name', 'nama', 'sheet', 'sheetname', 'nama sheet'];
-  for (const key of keys) {
-    const value = item[key];
-    if (value != null && value.toString().trim() !== '') {
-      return value.toString().trim();
-    }
-  }
-  return `Bank ${index + 1}`;
-}
-
-async function loadBankSheetItems() {
-  try {
-    const raw = await loadSheetData(DEFAULT_BANK_SHEET_ID, DEFAULT_BANK_SHEET_NAME);
-    return raw
-      .map((item, index) => {
-        const value = getBankValue(item);
-        return {
-          title: getBankTitle(item, index),
-          value,
-        };
-      })
-      .filter((item) => getSheetId(item.value));
-  } catch (error) {
-    return [];
-  }
-}
-
-async function renderBankList() {
-  const items = await loadBankSheetItems();
-  if (!items.length) {
-    elements.bankList.innerHTML = '<p class="bank-empty">Bank soal default tidak ditemukan. Cek koneksi atau spreadsheet default.</p>';
-    return;
-  }
+function renderBankList() {
+  const items = DEFAULT_BANK;
 
   elements.bankList.innerHTML = items
     .map((item) => {
