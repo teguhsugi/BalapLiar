@@ -208,7 +208,7 @@ async function renderBankList() {
           <div class="bank-item-actions">
             <button type="button" class="copy-link">Copy ID</button>
             <button type="button" class="use-link">Pakai</button>
-            ${item.source === 'local' ? '<button type="button" class="delete-link">Hapus</button>' : ''}
+            <button type="button" class="delete-link">Hapus</button>
           </div>
         </div>
       `;
@@ -275,7 +275,10 @@ function handleBankListClick(event) {
 
   if (button.classList.contains('delete-link')) {
     const source = item?.dataset?.source;
-    if (source !== 'local') return;
+    if (source !== 'local') {
+      setMessage('Bank bersama tidak bisa dihapus di sini. Edit bank.json jika ingin menghapus contoh bank.', 'info');
+      return;
+    }
     const items = loadBankItems();
     items.splice(index, 1);
     saveBankItems(items);
