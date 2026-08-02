@@ -1,18 +1,19 @@
 const SHEET_BASE_URL = 'https://docs.google.com/spreadsheets/d';
 const DEFAULT_SHEET_NAME = 'Sheet1';
 const PLAYER_COUNT = 4;
-const SHEET_CONFIG_KEY = 'quizSheetConfig';
+const BANK_KEY = 'quizSheetBank';
 
 const elements = {
   message: document.getElementById('message'),
   sheetId: document.getElementById('sheet-id'),
   sheetName: document.getElementById('sheet-name'),
-  sheetInputWrapper: document.getElementById('sheet-input-wrapper'),
-  savedSheetPanel: document.getElementById('saved-sheet-panel'),
   playerCount: document.getElementById('player-count'),
   loadButton: document.getElementById('load-sheet'),
   startButton: document.getElementById('start-game'),
-  editButton: document.getElementById('edit-sheet'),
+  bankTitle: document.getElementById('bank-title'),
+  bankInput: document.getElementById('bank-input'),
+  addBankButton: document.getElementById('add-bank-link'),
+  bankList: document.getElementById('bank-list'),
   summary: document.getElementById('sheet-summary'),
 };
 
@@ -108,37 +109,129 @@ function saveGameData(normalizedQuestions, playerCount) {
   sessionStorage.setItem('quizGameData', JSON.stringify({ questions: normalizedQuestions, playerCount }));
 }
 
-function saveSheetConfig(sheetId, sheetName) {
-  localStorage.setItem(SHEET_CONFIG_KEY, JSON.stringify({ sheetId, sheetName }));
+function saveBankItems(items) {
+  localStorage.setItem(BANK_KEY, JSON.stringify(items));
 }
 
-function loadSheetConfig() {
+function loadBankItems() {
   try {
-    return JSON.parse(localStorage.getItem(SHEET_CONFIG_KEY));
+    const stored = JSON.parse(localStorage.getItem(BANK_KEY)) || [];
+    return stored.map((item) => {
+      if (typeof item === 'string') {
+        return { title: '', value: item };
+      }
+      return {
+        title: item.title || '',
+        value: item.value || '',
+      };
+    });
   } catch (error) {
-    return null;
+    return [];
   }
 }
 
-function showSavedSheetConfig(config) {
-  if (!config) return;
-
-  elements.sheetId.value = config.sheetId;
-  elements.sheetName.value = config.sheetName;
-  elements.savedSheetPanel.innerHTML = `
-    <p>Sheet tersimpan:&nbsp;<strong>${config.sheetId}</strong></p>
-    <p>Sheet name:&nbsp;<strong>${config.sheetName}</strong></p>
-    <p>Klik <strong>Muat Soal</strong> untuk pakai lagi, atau Ubah Sheet untuk ganti.</p>
-  `;
-  elements.savedSheetPanel.classList.remove('hidden');
-  elements.editButton.classList.remove('hidden');
-  elements.sheetInputWrapper.classList.add('hidden');
+function getSheetId(value) {
+  const trimmed = value.toString().trim();
+  const match = trimmed.match(/[-\w]{25,}/);
+  if (!match) {
+    return trimmed;
+  }
+  return match[0];
 }
 
-function hideSavedSheetConfig() {
-  elements.savedSheetPanel.classList.add('hidden');
-  elements.editButton.classList.add('hidden');
-  elements.sheetInputWrapper.classList.remove('hidden');
+function renderBankList() {
+  const items = loadBankItems();
+  if (!items.length) {
+    elements.bankList.innerHTML = '<p class="bank-empty">Belum ada bank sheet. Tambahkan link/ID di atas.</p>';
+    return;
+  }
+
+  elements.bankList.innerHTML = items
+    .map((item, index) => {
+      const sheetId = getSheetId(item.value);
+      const title = item.title || `Sheet ${index + 1}`;
+      const shortId = `${sheetId.slice(0, 6)}...${sheetId.slice(-6)}`;
+      return `
+        <div class="bank-item" data-index="${index}" data-id="${sheetId}">
+          <div class="bank-item-main">
+            <div class="bank-item-title">${title}</div>
+            <div class="bank-item-meta">ID: ${shortId}</div>
+          </div>
+          <div class="bank-item-actions">
+            <button type="button" class="copy-link">Copy ID</button>
+            <button type="button" class="use-link">Pakai</button>
+            <button type="button" class="delete-link">Hapus</button>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function addBankLink() {
+  const title = elements.bankTitle.value.trim();
+  const inputValue = elements.bankInput.value.trim();
+  if (!inputValue) {
+    setMessage('Masukkan URL atau ID terlebih dahulu.', 'error');
+    return;
+  }
+
+  const sheetId = getSheetId(inputValue);
+  if (!sheetId) {
+    setMessage('ID Google Sheet tidak valid.', 'error');
+    return;
+  }
+
+  const items = loadBankItems();
+  if (items.some((item) => item.value === inputValue || getSheetId(item.value) === sheetId)) {
+    setMessage('Link bank sudah ada.', 'info');
+    elements.bankInput.value = '';
+    elements.bankTitle.value = '';
+    return;
+  }
+
+  const newItem = {
+    title: title || `Sheet ${items.length + 1}`,
+    value: inputValue,
+  };
+
+  items.unshift(newItem);
+  saveBankItems(items.slice(0, 20));
+  elements.bankInput.value = '';
+  elements.bankTitle.value = '';
+  renderBankList();
+  setMessage('Link Google Sheet ditambahkan ke bank.', 'success');
+}
+
+function handleBankListClick(event) {
+  const button = event.target.closest('button');
+  if (!button) return;
+
+  const item = button.closest('.bank-item');
+  const sheetId = item?.dataset?.id;
+  const index = Number(item?.dataset?.index);
+  if (!sheetId) return;
+
+  if (button.classList.contains('copy-link')) {
+    navigator.clipboard.writeText(sheetId)
+      .then(() => setMessage(`ID berhasil disalin: ${sheetId}`, 'success'))
+      .catch(() => setMessage('Gagal menyalin ID. Coba lagi.', 'error'));
+    return;
+  }
+
+  if (button.classList.contains('use-link')) {
+    elements.sheetId.value = sheetId;
+    setMessage('ID sheet diisi dari bank.', 'success');
+    return;
+  }
+
+  if (button.classList.contains('delete-link')) {
+    const items = loadBankItems();
+    items.splice(index, 1);
+    saveBankItems(items);
+    renderBankList();
+    setMessage('Bank sheet dihapus.', 'success');
+  }
 }
 
 function updateSheetSummary(questions, playerCount) {
@@ -171,8 +264,6 @@ async function loadQuestions() {
     }
 
     saveGameData(shuffle(normalized), playerCount);
-    saveSheetConfig(sheetId, sheetName);
-    showSavedSheetConfig({ sheetId, sheetName });
     updateSheetSummary(normalized, playerCount);
     elements.startButton.disabled = false;
     setMessage('Soal siap. Klik Start Game untuk masuk ke game.', 'success');
@@ -196,16 +287,12 @@ function startGame() {
 function init() {
   elements.loadButton.addEventListener('click', loadQuestions);
   elements.startButton.addEventListener('click', startGame);
-  elements.editButton.addEventListener('click', hideSavedSheetConfig);
+  elements.addBankButton.addEventListener('click', addBankLink);
+  elements.bankList.addEventListener('click', handleBankListClick);
   elements.startButton.disabled = true;
 
-  const savedConfig = loadSheetConfig();
-  if (savedConfig && savedConfig.sheetId && savedConfig.sheetName) {
-    showSavedSheetConfig(savedConfig);
-    setMessage('Sheet terakhir siap dipakai. Klik Muat Soal untuk memuat kembali.', 'info');
-  } else {
-    setMessage('Masukkan ID Google Sheet lalu klik Muat Soal.', 'info');
-  }
+  renderBankList();
+  setMessage('Masukkan ID Google Sheet lalu klik Muat Soal.', 'info');
 }
 
 init();

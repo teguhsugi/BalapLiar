@@ -93,6 +93,84 @@ label {
   color: #cbd5e1;
 }
 
+.sheet-bank {
+  padding: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.sheet-bank-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.sheet-bank-header p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: .95rem;
+}
+
+.bank-controls {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.bank-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.bank-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.bank-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.14);
+  border-radius: 999px;
+}
+
+.bank-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.bank-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+}
+
+.bank-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #e2e8f0;
+}
+
+.bank-item-actions button {
+  min-width: 100px;
+}
+
+.bank-empty {
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
 .hidden {
   display: none !important;
 }
