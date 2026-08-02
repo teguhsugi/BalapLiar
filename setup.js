@@ -3,6 +3,7 @@ const DEFAULT_SHEET_NAME = 'Sheet1';
 const PLAYER_COUNT = 4;
 const BANK_KEY = 'quizSheetBank';
 const SHARED_BANK_URL = 'bank.json';
+const HIDDEN_SHARED_KEY = 'hiddenSharedBankIds';
 
 const elements = {
   message: document.getElementById('message'),
@@ -131,6 +132,19 @@ function loadBankItems() {
   }
 }
 
+function loadHiddenSharedBankIds() {
+  try {
+    const hidden = JSON.parse(localStorage.getItem(HIDDEN_SHARED_KEY));
+    return Array.isArray(hidden) ? hidden : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveHiddenSharedBankIds(ids) {
+  localStorage.setItem(HIDDEN_SHARED_KEY, JSON.stringify(ids));
+}
+
 async function loadSharedBankItems() {
   try {
     const response = await fetch(SHARED_BANK_URL);
@@ -141,9 +155,11 @@ async function loadSharedBankItems() {
     if (!Array.isArray(data)) {
       return [];
     }
+    const hiddenIds = loadHiddenSharedBankIds();
     return data
       .filter((item) => item && typeof item.value === 'string')
-      .map((item) => ({ title: item.title || '', value: item.value }));
+      .map((item) => ({ title: item.title || '', value: item.value }))
+      .filter((item) => !hiddenIds.includes(getSheetId(item.value)));
   } catch (error) {
     return [];
   }
@@ -275,8 +291,16 @@ function handleBankListClick(event) {
 
   if (button.classList.contains('delete-link')) {
     const source = item?.dataset?.source;
-    if (source !== 'local') {
-      setMessage('Bank bersama tidak bisa dihapus di sini. Edit bank.json jika ingin menghapus contoh bank.', 'info');
+    const sheetId = item?.dataset?.id;
+    if (!sheetId) return;
+    if (source === 'shared') {
+      const hiddenIds = loadHiddenSharedBankIds();
+      if (!hiddenIds.includes(sheetId)) {
+        hiddenIds.push(sheetId);
+        saveHiddenSharedBankIds(hiddenIds);
+      }
+      renderBankList();
+      setMessage('Contoh bank disembunyikan secara lokal.', 'success');
       return;
     }
     const items = loadBankItems();
