@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BALAP LIAR! - Setup</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container setup-page">
+    <header>
+      <h1>BALAP LIAR!</h1>
+      <p class="created-by">dibuat oleh Teguh Sugi | Pengembang Teknologi Pembelajaran | PUSBANGKOM SDM LEGISLATIF</p>
+      <p>Masukkan ID Google Sheet kemudian muat. Setelah sukses, klik <strong>Start Game</strong>.</p>
+    </header>
+
+    <main>
+      <div class="config">
+        <div class="sheet-bank">
+          <div class="sheet-bank-header">
+            <h2>Bank Soal Default</h2>
+            <p>Daftar bank soal default tersedia di bawah. Klik <strong>Pakai</strong> untuk mengisi ID sheet secara otomatis.</p>
+          </div>
+          <div id="bank-list" class="bank-list"></div>
+        </div>
+
+        <div class="config-row">
+          <label>ID Google Sheet</label>
+          <input id="sheet-id" placeholder="Masukkan Google Sheet ID" />
+        </div>
+        <div class="config-row">
+          <label>Nama Sheet</label>
+          <input id="sheet-name" placeholder="Sheet1" value="Sheet1" />
+        </div>
+        <div class="config-row">
+          <label>Jumlah pemain</label>
+          <select id="player-count">
+            <option value="4" selected>4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </div>
+        <div class="config-actions">
+          <button id="load-sheet">Muat Soal</button>
+          <button id="start-game" disabled>Start Game</button>
+        </div>
+      </div>
+
+      <div id="message" class="message"></div>
+      <div id="sheet-summary" class="sheet-summary"></div>
+    </main>
+  </div>
+  <script src="setup.js"></script>
+</body>
+</html>
