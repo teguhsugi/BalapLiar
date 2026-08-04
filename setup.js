@@ -21,7 +21,7 @@ const elements = {
 
 function setMessage(text, type = 'info') {
   elements.message.textContent = text;
-  elements.message.style.color = type === 'error' ? '#f87171' : type === 'success' ? '#86efac' : '#f8fafc';
+  elements.message.style.color = type === 'error' ? '#f43f5e' : type === 'success' ? '#16a34a' : '#3b2d7a';
 }
 
 function getSheetUrl(sheetId, sheetName) {
